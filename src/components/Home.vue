@@ -112,20 +112,58 @@
 </template>
 
 <script>
+import {inject} from "vue";
+import axios from "axios";
+
 export default {
   name:'HomePage',
   data(){
     return{
+      tokenFix:'',
       avatarUrl:'https://i.loli.net/2017/08/21/599a521472424.jpg',
-      isManager:true,
+      isManager:false,
       theme:'light',
       isMobile:true,
     }
   },
   mounted() {
+    this.tokenFix = inject("tokenFix");
     this.queryTheme();
+    this.getUser();
   },
   methods:{
+    getUser(){
+      axios.get(this.$apiBaseUrl+'/api/user/getById?id='+sessionStorage.getItem("userId"),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          if(res.data.data.role === 'JOBSEEKERS'){
+            this.$Modal.err({
+              title: '错误！',
+              content: '您没有登录权限！'
+            });
+          } else if(res.data.data.role.includes("COMPANY") && res.data.data.role.includes("ADMIN")){
+            this.isManager = true;
+            this.toUser();
+          }else if(res.data.data.role.includes("ADMIN")){
+            // this.$router.push({path:'/user',query:{isManager: true}})
+            this.isManager = true;
+            this.toUser();
+          }else{
+            // this.$router.push("/home");
+            this.isManager = false;
+            this.toEnterprise();
+          }
+        }else{
+          this.loading = false;
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
     handleMenuToggle(visible) {
       console.log('菜单状态:', visible ? '展开' : '收起')
     },

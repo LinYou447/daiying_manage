@@ -9,7 +9,7 @@
         <Input v-model="searchName" placeholder="请输入企业名称" style="width: 250px;margin-right: 15px" />
         <Input v-model="searchPhone" placeholder="请输入联系电话" style="width: 250px" />
       </div>
-      <Button style="margin-right: 10px" type="primary" shape="circle" icon="ios-search">查   询</Button>
+      <Button @click="getAllCompany" style="margin-right: 10px" type="primary" shape="circle" icon="ios-search">查   询</Button>
       <Button @click="showModal" type="primary" shape="circle" icon="md-add">新增企业</Button>
     </div>
     <Table :height="tableHeight" stripe :columns="columns" :data="tableData"></Table>
@@ -20,8 +20,8 @@
         @on-cancel="cancel"
         :closable="false">
       <Form ref="formValidate" :model="formRight" :rules="ruleValidate" label-position="right" :label-width="100">
-        <FormItem label="企业名称" prop="enterpriseName">
-          <Input v-model="formRight.enterpriseName"></Input>
+        <FormItem label="企业名称" prop="name">
+          <Input v-model="formRight.name"></Input>
         </FormItem>
         <FormItem label="公司地址" prop="address">
           <Input v-model="formRight.address" maxlength="100" show-word-limit type="textarea" />
@@ -30,70 +30,112 @@
           <Input v-model="formRight.phone"></Input>
         </FormItem>
         <FormItem label="企业资质">
-          <Input v-model="formRight.qualifications"></Input>
+          <Input v-model="formRight.qualification"></Input>
         </FormItem>
         <FormItem label="注册资本">
-          <Input v-model="formRight.registeredCapital" prefix="logo-yen"  />
+          <Input v-model="formRight.capital" prefix="logo-yen"  />
         </FormItem>
         <FormItem label="法人" prop="legalPerson">
           <Input v-model="formRight.legalPerson"></Input>
         </FormItem>
-        <FormItem label="角色">
-          <CheckboxGroup v-model="formRight.role">
-            <Checkbox label="求职者"></Checkbox>
-            <Checkbox label="企业"></Checkbox>
-            <Checkbox label="管理员"></Checkbox>
-          </CheckboxGroup>
+        <FormItem label="关联用户">
+          <Row :gutter="16">
+            <Col span="6">
+              <div><Button @click="selectUser" type="primary">选择用户</Button></div>
+            </Col>
+            <Col span="18">
+              <div><Input disabled v-model="formRight.username" /></div>
+            </Col>
+          </Row>
         </FormItem>
       </Form>
       <template #footer>
-        <Button type="primary" :loading="loading" @click="createUser('formValidate')">确定</Button>
+        <Button type="primary" :loading="loading" @click="createEnterprise('formValidate')">确定</Button>
         <Button @click="cancel('formValidate')">取消</Button>
       </template>
+    </Modal>
+    <Modal @on-cancel="cancelSelect" width="80%" v-model="modal3">
+      <Table :mask-closable="false" @on-current-change="currentChange" highlight-row ref="currentRowTable" :columns="userColumns" :data="userData"></Table>
     </Modal>
   </div>
 </template>
 
 <script>
-import {resolveComponent} from "vue";
+import {inject, resolveComponent} from "vue";
+import {Button, Modal} from "view-ui-plus";
+import axios from "axios";
 
 export default {
   name:'EnterpriseManage',
+  components: {Modal, Button},
   data(){
     return{
       tableHeight:'200',
+      isEdit:false,
       modal2:false,
+      modal3:false,
       loading:false,
+      tokenFix:'',
       positionTitle:'',
-      searchName:'',
-      searchPhone:'',
+      searchName:null,
+      searchPhone:null,
       editId:'',
+      selectData:true,
       tableData: [
         {
           id:'1234568',
-          enterpriseName: '喔喔喔科技有限公司',
+          name: '喔喔喔科技有限公司',
           address: '北京市大兴区',
           phone: '15203507334',
-          qualifications:'企业资质',
-          registeredCapital:0,
+          qualification:'企业资质',
+          capital:0,
           legalPerson:'张三',
           role:'企业'
         }
       ],
       formRight: {
         id:'',
-        enterpriseName: '',
+        name: '',
         address: '',
         phone: '',
-        qualifications:'',
-        registeredCapital:0,
+        qualification:'',
+        capital:0,
         legalPerson:'',
-        role:[]
+        username:null,
+        userId:null
       },
+      userColumns: [
+        {
+          type: 'index',
+          width: 60,
+          align: 'center'
+        },
+        {
+          title: '用户名',
+          key: 'username'
+        },
+        {
+          title: '手机号',
+          key: 'phone'
+        },
+        {
+          title: '角色',
+          key: 'role'
+        },
+        {
+          title: '邮箱',
+          key: 'email'
+        },
+        {
+          title: '创建时间',
+          key: 'createTime'
+        },
+      ],
+      userData: [],
       columns: [
         {
           title: '企业名称',
-          key: 'enterpriseName',
+          key: 'name',
           align: 'center',
         },
         {
@@ -108,12 +150,12 @@ export default {
         },
         {
           title: '企业资质',
-          key: 'qualifications',
+          key: 'qualification',
           align: 'center',
         },
         {
           title: '注册资本',
-          key: 'registeredCapital',
+          key: 'capital',
           width: 180,
           align: 'center'
         },
@@ -148,6 +190,7 @@ export default {
                 type: 'error',
                 size: 'small',
                 onClick: () => {
+                  // this.deleteCompany(params.row.id)
                   this.instance(params.row.id,3)
                 }
               }, {
@@ -160,7 +203,7 @@ export default {
         }
       ],
       ruleValidate: {
-        enterpriseName: [
+        name: [
           { required: true, message: '企业名称不能为空', trigger: 'blur' }
         ],
         adress: [
@@ -177,27 +220,73 @@ export default {
   },
   mounted() {
     this.tableHeight = window.innerHeight - 140;
+    this.tokenFix = inject("tokenFix");
+    this.getAllCompany();
   },
   methods:{
+    getAllCompany(){
+      axios.post(this.$apiBaseUrl+'/api/company/getAllCompany',
+          {
+            name:this.searchName,
+            phone:this.searchPhone
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.tableData = res.data.data;
+        }else{
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    currentChange(currentRow, oldRow){
+      console.log(currentRow.username);
+      console.log(oldRow);
+      this.formRight.username = currentRow.username;
+      this.formRight.userId = currentRow.id;
+    },
+    cancelSelect(){
+      this.formRight.username = null;
+      this.formRight.userId = null;
+    },
     showModal(){
       this.positionTitle = '新建企业';
       this.modal2 = true;
+      this.isEdit = false;
+    },
+    selectUser(){
+      axios.get(this.$apiBaseUrl+'/api/user/getAllByRole?role=JOBSEEKERS',
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.userData = res.data.data;
+          this.modal3 = true;
+        }else{
+          this.$Message.error(res.data.message);
+        }
+      })
     },
     editUser(id,index){
+      this.isEdit = true;
       this.positionTitle = '编辑企业';
       this.modal2 = true;
       this.formRight.id = id;
-      this.formRight.enterpriseName = this.tableData[index].enterpriseName;
+      this.formRight.name = this.tableData[index].name;
       this.formRight.address = this.tableData[index].address;
       this.formRight.phone = this.tableData[index].phone;
-      this.formRight.qualifications = this.tableData[index].qualifications;
-      this.formRight.registeredCapital = this.tableData[index].registeredCapital;
+      this.formRight.qualification = this.tableData[index].qualification;
+      this.formRight.capital = this.tableData[index].capital;
       this.formRight.legalPerson = this.tableData[index].legalPerson;
-      // this.formRight.role = this.tableData[0].role;
-      var items = this.tableData[0].role.split(',');
-      items.forEach(item=>{
-        this.formRight.role.push(item);
-      })
+      this.formRight.username = this.tableData[index].username;
+      this.formRight.userId = this.tableData[index].userId;
     },
     instance (id,state) {
       const title = '删除';
@@ -220,8 +309,8 @@ export default {
             title: title,
             content: content,
             showClose:true,
-            onOk(){
-
+            onOk:()=>{
+              this.deleteCompany(id);
             }
           });
           break;
@@ -234,16 +323,55 @@ export default {
       this.modal2 = false;
       this.handleReset(name);
     },
-    createUser(name){
-      this.positionTitle = '新建用户';
+    create(){
+      axios.post(this.$apiBaseUrl+'/api/company/createCompany',this.formRight,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.loading = false;
+          this.modal2 = false;
+          this.$Message.success(res.data.message);
+        }else{
+          this.loading = false;
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    update(){
+      axios.post(this.$apiBaseUrl+'/api/company/updateCompany',this.formRight,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.loading = false;
+          this.modal2 = false;
+          this.$Message.success(res.data.message);
+        }else{
+          this.loading = false;
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    createEnterprise(name){
+      if(this.formRight.userId===null){
+        this.$Message.error('请关联企业用户');
+        return;
+      }
       this.loading = true;
       this.$refs[name].validate((valid) => {
         if (valid) {
-          setTimeout(() => {
-            this.loading = false;
-            this.modal2 = false;
-          }, 2000);
-          this.$Message.success('提交成功!');
+          if(this.isEdit){
+            this.update();
+          }else{
+            this.create()
+          }
         } else {
           this.loading = false;
         }
@@ -251,6 +379,23 @@ export default {
     },
     handleReset (name) {
       this.$refs[name].resetFields();
+    },
+    deleteCompany(companyId){
+      axios.delete(this.$apiBaseUrl+'/api/company/deleteById?id='+companyId,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.$Message.success(res.data.message);
+          this.getAllCompany();
+        }else{
+          this.loading = false;
+          this.$Message.error(res.data.message);
+        }
+      })
     }
   }
 }

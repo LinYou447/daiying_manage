@@ -9,7 +9,7 @@
         <Input v-model="searchName" placeholder="请输入用户名" style="width: 250px;margin-right: 15px" />
         <Input v-model="searchPhone" placeholder="请输入手机号" style="width: 250px" />
       </div>
-      <Button style="margin-right: 10px" type="primary" shape="circle" icon="ios-search">查   询</Button>
+      <Button @click="getAllUser" style="margin-right: 10px" type="primary" shape="circle" icon="ios-search">查   询</Button>
       <Button @click="showModal" type="primary" shape="circle" icon="md-add">新增用户</Button>
     </div>
     <Table :height="tableHeight" stripe :columns="columns" :data="tableData"></Table>
@@ -34,9 +34,10 @@
         </FormItem>
         <FormItem label="角色">
           <CheckboxGroup v-model="formRight.role">
-            <Checkbox label="求职者"></Checkbox>
-            <Checkbox label="企业"></Checkbox>
-            <Checkbox label="管理员"></Checkbox>
+<!--            <Checkbox label="JOBSEEKERS"></Checkbox>-->
+<!--            <Checkbox label="COMPANY"></Checkbox>-->
+<!--            <Checkbox label="ADMIN"></Checkbox>-->
+            <Checkbox v-for="(role,index) in roleList" :key="index" :label="role.name"></Checkbox>
           </CheckboxGroup>
         </FormItem>
       </Form>
@@ -49,7 +50,8 @@
 </template>
 
 <script>
-import {resolveComponent} from "vue";
+import {inject, resolveComponent} from "vue";
+import axios from "axios";
 
 export default {
   name:'PositionPage',
@@ -58,10 +60,13 @@ export default {
       tableHeight:'200',
       modal2:false,
       loading:false,
+      isEdit:false,
+      tokenFix:'',
       positionTitle:'',
       searchName:'',
       searchPhone:'',
       editId:'',
+      roleList:[],
       tableData: [
         {
           id:'1345664',
@@ -190,24 +195,78 @@ export default {
   },
   mounted() {
     this.tableHeight = window.innerHeight - 140;
+    this.tokenFix = inject("tokenFix");
+    this.getAllRole();
+    this.getAllUser();
   },
   methods:{
+    getAllRole(){
+      var req={
+        state:1
+      }
+      axios.post(this.$apiBaseUrl+'/api/role/getAll',req,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          console.log(res.data.data)
+          this.roleList = res.data.data;
+        }else{
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    getAllUser(){
+      axios.post(this.$apiBaseUrl+'/api/user/getAll',
+          {
+            username:this.searchName,
+            phone:this.searchPhone
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.tableData = res.data.data;
+        }else{
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
     showModal(){
       this.positionTitle = '新建用户';
       this.modal2 = true;
+      this.isEdit = false;
     },
     editUser(id){
+      this.isEdit = true;
       this.positionTitle = '编辑用户';
       this.modal2 = true;
-      this.formRight.id = id;
-      this.formRight.username = this.tableData[0].username;
-      this.formRight.password = this.tableData[0].password;
-      this.formRight.phone = this.tableData[0].phone;
-      this.formRight.email = this.tableData[0].email;
-      // this.formRight.role = this.tableData[0].role;
-      var items = this.tableData[0].role.split(',');
-      items.forEach(item=>{
-        this.formRight.role.push(item);
+      this.getUserById(id);
+    },
+    getUserById(id){
+      axios.get(this.$apiBaseUrl+'/api/user/getById?id='+id,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.formRight=res.data.data;
+          var items = this.formRight.role.split(',');
+          this.formRight.role=[];
+          items.forEach(item=>{
+            this.formRight.role.push(item);
+          })
+        }else{
+          this.$Message.error(res.data.message);
+        }
       })
     },
     instance (id,state) {
@@ -229,28 +288,102 @@ export default {
         case 3:
           this.$Modal.confirm({
             title: title,
-            content: content
+            content: content,
+            showClose:true,
+            onOk:()=>{
+              this.delete(id);
+            }
           });
           break;
       }
     },
-    editRole(){
-
-    },
     cancel(name){
       this.modal2 = false;
       this.handleReset(name);
+    },
+    create(){
+      var roleStr = '';
+      this.formRight.role.forEach((item,index)=>{
+        roleStr = roleStr + item;
+        if(index !== this.formRight.role.length-1 ){
+          roleStr = roleStr + ',';
+        }
+      })
+      this.formRight.role = roleStr;
+      axios.post(this.$apiBaseUrl+'/api/user/regedit',this.formRight,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.loading = false;
+          this.modal2 = false;
+          this.$Message.success(res.data.message);
+          this.getAllUser();
+          // window.location.reload();
+        }else{
+          this.loading = false;
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    update(){
+      var roleStr = '';
+      this.formRight.role.forEach((item,index)=>{
+        roleStr = roleStr + item;
+        if(index !== this.formRight.role.length-1 ){
+          roleStr = roleStr + ',';
+        }
+      })
+      this.formRight.role = roleStr;
+      axios.post(this.$apiBaseUrl+'/api/user/editUser',this.formRight,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.loading = false;
+          this.modal2 = false;
+          this.$Message.success(res.data.message);
+          this.getAllUser();
+          // window.location.reload();
+        }else{
+          this.loading = false;
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    delete(userId){
+      axios.delete(this.$apiBaseUrl+'/api/user/deleteById?id='+userId,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.$Message.success(res.data.message);
+          this.getAllUser();
+        }else{
+          this.loading = false;
+          this.$Message.error(res.data.message);
+        }
+      })
     },
     createUser(name){
       // this.positionTitle = '新建用户';
       this.loading = true;
       this.$refs[name].validate((valid) => {
         if (valid) {
-          setTimeout(() => {
-            this.loading = false;
-            this.modal2 = false;
-            this.$Message.success('操作成功!');
-          }, 2000);
+          if(this.isEdit){
+            this.update(name);
+          }else{
+            this.create(name);
+          }
         } else {
           this.loading = false;
         }

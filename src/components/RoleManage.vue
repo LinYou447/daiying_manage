@@ -8,13 +8,13 @@
       <div style="display: flex;margin-right: 10px">
         <div style="display: flex;margin-right: 15px">
           <div style="width: 70px;align-content: center">启用状态</div>
-          <Select v-model="roleState" style="width: 150px">
+          <Select v-model="req.state" clearable style="width: 150px">
             <Option v-for="item in roleStateList" :value="item.value" :key="item.value">{{ item.label }}</Option>
           </Select>
         </div>
-        <Input v-model="searchName" placeholder="请输入角色名" style="width: 250px;margin-right: 15px" />
+        <Input v-model="req.name" placeholder="请输入角色名" style="width: 250px;margin-right: 15px" />
       </div>
-      <Button style="margin-right: 10px" type="primary" shape="circle" icon="ios-search">查   询</Button>
+      <Button @click="getAll" style="margin-right: 10px" type="primary" shape="circle" icon="ios-search">查   询</Button>
       <Button @click="showModal" type="primary" shape="circle" icon="md-add">新增角色</Button>
     </div>
     <Table :height="tableHeight" stripe :columns="columns" :data="tableData"></Table>
@@ -25,14 +25,14 @@
         @on-cancel="cancel"
         :closable="false">
       <Form ref="formValidate" :rules="ruleValidate" :model="formRight" label-position="right" :label-width="100">
-        <FormItem label="角色名称" prop="roleName">
-          <Input v-model="formRight.roleName"></Input>
+        <FormItem label="角色名称" prop="name">
+          <Input v-model="formRight.name"></Input>
         </FormItem>
         <FormItem label="是否启用">
-          <Switch v-model="formRight.roleState" true-color="#13ce66" false-color="#ff4949" />
+          <Switch v-model="formRight.state" true-color="#13ce66" false-color="#ff4949" />
         </FormItem>
-        <FormItem label="角色权限" prop="roleAuth">
-          <Input v-model="formRight.roleAuth"></Input>
+        <FormItem label="角色权限" prop="des">
+          <Input v-model="formRight.des"></Input>
         </FormItem>
       </Form>
       <template #footer>
@@ -44,7 +44,8 @@
 </template>
 
 <script>
-import {resolveComponent} from "vue";
+import {inject, resolveComponent} from "vue";
+import axios from "axios";
 
 export default {
   name:'PositionPage',
@@ -52,59 +53,61 @@ export default {
     return{
       tableHeight:'200',
       modal2:false,
+      tokenFix:'',
       loading:false,
       positionTitle:'',
-      searchName:'',
-      searchPhone:'',
-      editId:'',
-      roleState:'',
+      isEdit:false,
+      req:{
+        name:'',
+        state:'',
+      },
       roleStateList:[
         {
           value: '1',
           label: '启用'
         },
         {
-          value: '2',
+          value: '0',
           label: '停用'
         }
       ],
       tableData: [
         {
           id:'123456',
-          roleName: '管理员',
-          roleState: true,
+          name: '管理员',
+          state: true,
           createTime:'2025-05-12 11:12:25',
-          roleAuth: '系统所有权限，用户修改删除，企业职位发布审核，企业管理'
+          des: '系统所有权限，用户修改删除，企业职位发布审核，企业管理'
         },{
           id:'123496',
-          roleName: '企业',
-          roleState: true,
+          name: '企业',
+          state: true,
           createTime:'2025-05-12 11:17:45',
-          roleAuth: '企业设置，职位申请审核'
+          des: '企业设置，职位申请审核'
         },{
           id:'123486',
-          roleName: '求职者',
-          roleState: false,
+          name: '求职者',
+          state: false,
           createTime:'2025-05-12 11:15:30',
-          roleAuth: '浏览职位，简历编辑保存，申请职位'
+          des: '浏览职位，简历编辑保存，申请职位'
         }
       ],
       formRight: {
         id:'',
-        roleName: '',
-        roleState: true,
+        name: '',
+        state: true,
         createTime:'',
-        roleAuth: ''
+        des: ''
       },
       columns: [
         {
           title: '角色名称',
-          key: 'roleName',
+          key: 'name',
           align: 'center',
         },
         {
           title: '角色状态',
-          key: 'roleState',
+          key: 'state',
           align: 'center',
           render: (h,params) => {  // 按钮操作
             return h('div', [
@@ -112,9 +115,9 @@ export default {
                 trueColor: "#13ce66",
                 falseColor: "#ff4949",
                 size: 'small',
-                modelValue: params.row.roleState, // 绑定到行数据的 status 字段
+                modelValue: params.row.state, // 绑定到行数据的 status 字段
                 onClick: () => {
-                  this.editRoleState(params.row.roleState,params.row.id);
+                  this.editRoleState(params.row.state,params.row.id);
                 }
               })
             ]);
@@ -127,7 +130,7 @@ export default {
         },
         {
           title: '角色权限',
-          key: 'roleAuth',
+          key: 'des',
           width: 180,
           align: 'center'
         },
@@ -168,28 +171,31 @@ export default {
         }
       ],
       ruleValidate: {
-        roleName: [
+        name: [
           { required: true, message: '用户名不能为空', trigger: 'blur' }
         ],
-        roleAuth: [
+        des: [
           { required: true, message: '密码不能为空', trigger: 'blur' }
         ]
       }
     }
   },
   mounted() {
+    this.tokenFix = inject("tokenFix");
     this.tableHeight = window.innerHeight - 140;
+    this.getAll();
   },
   methods:{
     editRoleState(state,id){
-      this.formRight.roleState = !state;
+      this.formRight.state = !state;
       this.formRight.id = id;
     },
     showModal(){
       this.positionTitle = '新建用户';
       this.modal2 = true;
+      this.isEdit = false;
     },
-    instance (id,state) {
+    instance (roleId,state) {
       const title = '删除';
       const content = '是否确认删除本条数据？';
       switch (state) {
@@ -208,54 +214,131 @@ export default {
         case 3:
           this.$Modal.confirm({
             title: title,
-            content: content
+            content: content,
+            onOk:()=>{
+              this.delete(roleId);
+            }
           });
           break;
       }
     },
-    editRole(id,index){
+    create(){
+      axios.post(this.$apiBaseUrl+'/api/role/create', this.formRight,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.$Message.success(res.data.message);
+          this.loading = false;
+          this.modal2 = false;
+          this.handleReset();
+          this.getAll();
+        }else{
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    update(){
+      axios.post(this.$apiBaseUrl+'/api/role/update', this.formRight,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.$Message.success(res.data.message);
+          this.loading = false;
+          this.modal2 = false;
+          this.handleReset();
+          this.getAll();
+        }else{
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    delete(roleId){
+      axios.delete(this.$apiBaseUrl+'/api/role/delete?id='+roleId,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.$Message.success(res.data.message);
+          this.getAll();
+        }else{
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    getAll(){
+      axios.post(this.$apiBaseUrl+'/api/role/getAll',this.req,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.tableData = res.data.data;
+        }else{
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    editRole(id){
       this.positionTitle = '编辑角色';
       this.modal2 = true;
-      this.formRight.id = id;
-      this.formRight.roleName = this.tableData[index].roleName;
-      this.formRight.roleState = this.tableData[index].roleState;
-      this.formRight.roleAuth = this.tableData[index].roleAuth;
-      this.formRight.createTime = this.tableData[index].createTime;
+      this.isEdit = true;
+      this.getById(id);
     },
-    cancel(name){
+    getById(id){
+      axios.get(this.$apiBaseUrl+'/api/role/getById?id='+id,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.formRight = res.data.data;
+        }else{
+          this.$Message.error(res.data.message);
+        }
+      })
+    },
+    cancel(){
       this.modal2 = false;
-      this.handleReset(name);
+      this.handleReset();
 
     },
     createUser(name){
       this.loading = true;
       this.$refs[name].validate((valid) => {
         if (valid) {
-          setTimeout(() => {
-            this.loading = false;
-            this.modal2 = false;
-            this.$Message.success('操作成功!');
-            this.formRight={
-              id:'',
-              roleName: '',
-              roleState: true,
-              createTime:'',
-              roleAuth: ''
-            }
-          }, 2000);
+          if(this.isEdit){
+            this.update();
+          }else{
+            this.create();
+          }
         } else {
           this.loading = false;
         }
       });
     },
-    handleReset (name) {
-      this.$refs[name].resetFields();
+    handleReset () {
+      this.$refs['formValidate'].resetFields();
       this.formRight={
         id:'',
-        roleName: '',
-        roleState: true,
+        name: '',
+        state: true,
         createTime:'',
-        roleAuth: ''
+        des: ''
       }
     }
   }
