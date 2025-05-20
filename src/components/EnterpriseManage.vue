@@ -335,6 +335,7 @@ export default {
           this.loading = false;
           this.modal2 = false;
           this.$Message.success(res.data.message);
+          this.getAllCompany();
         }else{
           this.loading = false;
           this.$Message.error(res.data.message);
@@ -353,6 +354,7 @@ export default {
           this.loading = false;
           this.modal2 = false;
           this.$Message.success(res.data.message);
+          this.getAllCompany();
         }else{
           this.loading = false;
           this.$Message.error(res.data.message);

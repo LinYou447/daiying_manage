@@ -8,7 +8,7 @@
       <div style="display: flex;margin-right: 10px">
         <Input v-model="req.username" placeholder="请输入用户名" style="width: 250px;margin-right: 15px" />
       </div>
-      <Button @click="getAll" style="margin-right: 10px" type="primary" shape="circle" icon="ios-search">查   询</Button>
+      <Button @click="getAllByUserName" style="margin-right: 10px" type="primary" shape="circle" icon="ios-search">查   询</Button>
     </div>
     <Table :height="tableHeight" stripe :columns="columns" :data="tableData"></Table>
   </div>
@@ -43,48 +43,25 @@ export default {
           label: '停用'
         }
       ],
-      tableData: [
-        {
-          id:'123456',
-          roleName: '小不点',
-          rolePhone: 15203507334,
-          role:'管理员',
-          createTime:'2025-05-12 11:12:25',
-          editTime:'2025-05-12 11:12:25',
-          editMessage: '修改用户表'
-        }
-      ],
-      formRight: {
-        id:'',
-        roleName: '',
-        roleState: true,
-        createTime:'',
-        roleAuth: ''
-      },
+      tableData: [],
       columns: [
         {
           title: '用户名称',
           key: 'username',
           align: 'center',
         },{
-          title: '用户电话',
-          key: 'phone',
+          title: '标题',
+          key: 'title',
           align: 'center',
         },{
-          title: '用户角色',
-          key: 'roleName',
+          title: '内容',
+          key: 'context',
           align: 'center',
         },
         {
-          title: '操作时间',
+          title: '发布时间',
           key: 'createTime',
           align: 'center',
-        },
-        {
-          title: '操作记录',
-          key: 'editDes',
-          width: 180,
-          align: 'center'
         },
         {
           title: '操作',
@@ -125,7 +102,7 @@ export default {
   },
   methods:{
     getAll(){
-      axios.post(this.$apiBaseUrl+'/api/log/getAll',this.req,
+      axios.get(this.$apiBaseUrl+'/api/lvShare/getAll',
           {
             headers: {
               'Content-Type': 'application/json',
@@ -140,7 +117,7 @@ export default {
       })
     },
     delete(id){
-      axios.delete(this.$apiBaseUrl+'/api/log/delete?id='+id,
+      axios.delete(this.$apiBaseUrl+'/api/lvShare/delete?id='+id,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -181,6 +158,21 @@ export default {
           });
           break;
       }
+    },
+    getAllByUserName(){
+      axios.get(this.$apiBaseUrl+'/api/lvShare/getAllByUsername?username='+this.req.username,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.tableData = res.data.data;
+        }else{
+          this.$Message.error(res.data.message);
+        }
+      })
     }
   }
 }

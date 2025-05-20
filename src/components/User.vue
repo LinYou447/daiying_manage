@@ -329,7 +329,43 @@ export default {
         }
       })
     },
+    getUserCompany(){
+      axios.get(this.$apiBaseUrl+'/api/user/getUserCompany?userId='+this.formRight.id,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200 && res.data.data == '1'){
+          this.updateUser();
+        }else if(res.data.code===200 && res.data.data == '2'){
+          this.$Modal.confirm({
+            title: '提示',
+            content: '修改用户企业权限会断开企业与用户之间的联系，是否继续？',
+            onOk:()=>{
+              this.updateUser();
+            }
+          });
+        }else{
+          this.$Message.error('系统错误！请稍后再试');
+        }
+      })
+    },
     update(){
+      var flash = false;
+      this.formRight.role.forEach(item=>{
+        if(item=='COMPANY'){
+          flash = true;
+        }
+      })
+      if(!flash){
+        this.getUserCompany();
+      }else{
+        this.updateUser();
+      }
+    },
+    updateUser(){
       var roleStr = '';
       this.formRight.role.forEach((item,index)=>{
         roleStr = roleStr + item;

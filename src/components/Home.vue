@@ -12,6 +12,14 @@
   font-size: 16px;
   z-index: 10;
 }
+.home-style-title1{
+  position: absolute;
+  left: 20px;
+  top: 17px;
+  color: black;
+  font-size: 16px;
+  z-index: 10;
+}
 .content-body-style{
   height: calc(100% - 60px);
   width: 100%;
@@ -55,15 +63,15 @@
 
 
 
-    <div class="home-style-title">
+    <div :class="this.theme==='dark' ? 'home-style-title' : 'home-style-title1'">
       校园兼职管理系统
     </div>
-    <Menu style="padding-left: 200px" mode="horizontal" theme="dark" active-name="1">
+    <Menu style="padding-left: 200px" mode="horizontal" :theme="theme" active-name="1">
 
     </Menu>
     <div class="content-body-style">
 <!--      管理员-->
-      <Menu v-if="isManager" theme="dark" active-name="1">
+      <Menu v-if="isManager" :theme="theme" active-name="1">
         <MenuItem @click="toUser" name="1">
           <Icon type="ios-paper" />
           用户管理
@@ -76,21 +84,25 @@
           <Icon type="ios-people" />
           兼职信息管理
         </MenuItem>
-        <MenuItem @click="toRoleManage" name="4">
+        <MenuItem @click="toLvShareManage" name="4">
+          <Icon type="ios-people" />
+         评论信息管理
+        </MenuItem>
+        <MenuItem @click="toRoleManage" name="5">
           <Icon type="ios-people" />
           用户角色配置
         </MenuItem>
-        <MenuItem @click="toManageMessage" name="5">
+        <MenuItem @click="toManageMessage" name="6">
           <Icon type="ios-people" />
           系统操作日志
         </MenuItem>
-        <MenuItem @click="toEditManage" name="6">
+        <MenuItem @click="toEditManage" name="7">
           <Icon type="ios-people" />
           系统设置
         </MenuItem>
       </Menu>
 <!--      企业-->
-      <Menu v-else theme="dark" active-name="1">
+      <Menu v-else :theme="theme" active-name="1">
         <MenuItem @click="toEnterprise" name="1">
           <Icon type="ios-paper" />
           企业信息
@@ -188,34 +200,47 @@ export default {
       })
     },
     toUser(){
-      this.$router.push("/user")
+      this.$router.push("/user");
     },
     toEnterprise(){
-      this.$router.push('/enterprise')
+      this.$router.push('/enterprise');
     },
     toPosition(){
-      this.$router.push('/position')
+      this.$router.push('/position');
     },
     toEntry(){
-      this.$router.push('/entry')
+      this.$router.push('/entry');
     },
     queryTheme(){
-      this.theme = 'dark';
+      axios.get(this.$apiBaseUrl+'/api/theme/getById?id=1',
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.tokenFix + `${sessionStorage.getItem('token')}`
+            }
+          }).then(res=>{
+        if(res.data.code===200){
+          this.theme = res.data.data.theme;
+        }
+      })
     },
     toEnterpriseManage(){
-      this.$router.push('/enterpriseManage')
+      this.$router.push('/enterpriseManage');
     },
     toPositionManage(){
-      this.$router.push('/positionManage')
+      this.$router.push('/positionManage');
     },
     toRoleManage(){
-      this.$router.push('/roleManage')
+      this.$router.push('/roleManage');
     },
     toManageMessage(){
-      this.$router.push('/manageMessage')
+      this.$router.push('/manageMessage');
     },
     toEditManage(){
-      this.$router.push('/editManage')
+      this.$router.push('/editManage');
+    },
+    toLvShareManage(){
+      this.$router.push('/lvShareManage');
     }
   }
 }

@@ -10,6 +10,8 @@ import PositionManage from "@/components/PositionManage.vue";
 import RoleManage from "@/components/RoleManage.vue";
 import ManageMessage from "@/components/ManageMessage.vue";
 import EditManage from "@/components/EditManage.vue";
+import Regedit from "@/components/Regedit.vue";
+import LvShareManage from "@/components/LvShareManage.vue";
 // import Router from 'vue-router';
 const routes = [
     {
@@ -17,6 +19,11 @@ const routes = [
         name:'Login',
         hidden: false,
         component:Login
+    },{
+        path:'/regedit',
+        name:'Regedit',
+        hidden: false,
+        component:Regedit
     },{
         path:'/home',
         name:'Home',
@@ -68,6 +75,11 @@ const routes = [
                 name:'EditManage',
                 hidden: false,
                 component:EditManage
+            },{
+                path:'/lvShareManage',
+                name:'LvShareManage',
+                hidden: false,
+                component:LvShareManage
             }
         ]
     },
