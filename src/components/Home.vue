@@ -4,20 +4,32 @@
   height: 100%;
   position: relative;
 }
+
+.logo-style{
+  width: 200px;
+  height: 40px;
+  position: absolute;
+  top: 11px;
+  left: 13px;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-image: url("/image/logo.png");
+  z-index: 20;
+}
 .home-style-title{
   position: absolute;
-  left: 20px;
+  left: 242px;
   top: 17px;
   color: white;
-  font-size: 16px;
+  font-size: 19px;
   z-index: 10;
 }
 .home-style-title1{
   position: absolute;
-  left: 20px;
+  left: 242px;
   top: 17px;
   color: black;
-  font-size: 16px;
+  font-size: 19px;
   z-index: 10;
 }
 .content-body-style{
@@ -34,7 +46,9 @@
 
 <template>
   <div class="home-style">
+    <div class="logo-style">
 
+    </div>
     <div style=" position: absolute;right: 0;top: 15px;width: 60px;height: 60px;z-index: 10">
       <Space size="large" wrap>
         <Dropdown
@@ -60,9 +74,6 @@
         </Dropdown>
       </Space>
     </div>
-
-
-
     <div :class="this.theme==='dark' ? 'home-style-title' : 'home-style-title1'">
       校园兼职管理系统
     </div>
@@ -73,31 +84,31 @@
 <!--      管理员-->
       <Menu v-if="isManager" :theme="theme" active-name="1">
         <MenuItem @click="toUser" name="1">
-          <Icon type="ios-paper" />
+          <Icon type="ios-people" />
           用户管理
         </MenuItem>
         <MenuItem @click="toEnterpriseManage" name="2">
-          <Icon type="ios-people" />
+          <Icon type="md-outlet" />
           企业管理
         </MenuItem>
         <MenuItem @click="toPositionManage" name="3">
-          <Icon type="ios-people" />
+          <Icon type="ios-paper" />
           兼职信息管理
         </MenuItem>
         <MenuItem @click="toLvShareManage" name="4">
-          <Icon type="ios-people" />
+          <Icon type="ios-chatbubbles" />
          评论信息管理
         </MenuItem>
         <MenuItem @click="toRoleManage" name="5">
-          <Icon type="ios-people" />
+          <Icon type="md-people" />
           用户角色配置
         </MenuItem>
         <MenuItem @click="toManageMessage" name="6">
-          <Icon type="ios-people" />
+          <Icon type="ios-film" />
           系统操作日志
         </MenuItem>
         <MenuItem @click="toEditManage" name="7">
-          <Icon type="ios-people" />
+          <Icon type="md-construct" />
           系统设置
         </MenuItem>
       </Menu>
@@ -108,11 +119,11 @@
           企业信息
         </MenuItem>
         <MenuItem @click="toPosition" name="2">
-          <Icon type="ios-people" />
+          <Icon type="md-contacts" />
           职位管理
         </MenuItem>
         <MenuItem @click="toEntry" name="3">
-          <Icon type="ios-people" />
+          <Icon type="md-done-all" />
           入职申请
         </MenuItem>
       </Menu>
