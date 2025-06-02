@@ -178,13 +178,11 @@ export default {
         {
           title: '职位介绍',
           key: 'jobDescription',
-          width: 220,
           align: 'center'
         },
         {
           title: '职位要求',
           key: 'jobRequirements',
-          width: 220,
           align: 'center',
 
         },
